@@ -1,0 +1,10 @@
+#!/usr/bin/env ruby
+require 'murashitbot'
+
+trap :INT do
+  print "\r"
+  exit
+end
+
+Murashitbot::Command.start
+
