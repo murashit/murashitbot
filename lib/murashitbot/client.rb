@@ -2,6 +2,8 @@
 require 'twitter'
 require 'yaml'
 
+class RedoCountExceeded < StandardError; end
+
 module Murashitbot
   class Client
     def initialize(name)
@@ -21,9 +23,16 @@ module Murashitbot
     def post
       nhc = open("#{@name}/head_candidates.dat", "rb") {|f| Marshal.load(f)}
       marcov = Murashitbot::Marcov.new(@db, nhc, @length)
-      status = marcov.chain
-      status.gsub!(/[^。！？…]*?[。！？…]*?$/, "") if status.length > 140
-      @client.update(status)
+      begin
+        raise RedoCountExceeded if redo_count > 9
+        status = marcov.chain
+        status.gsub!(/[^。！？…]*?[。！？…]*?$/, "") if status.length > 140
+        @client.update(status)
+      rescue RedoCountExceeded
+      rescue
+        redo_count += 1
+        redo
+      end
     end
 
     def reply
@@ -38,18 +47,23 @@ module Murashitbot
           re_db = Murashitbot::Parser.parse(m.text.toutf8.delete("@#{@name} "))
           hc = @db.list_reply_head_candidates(re_db)
           marcov = Murashitbot::Marcov.new(@db,hc,@length)
+          redo_count = 0
           begin
+            raise RedoCountExceeded if redo_count > 9
             status = "@" + at_id + " " + marcov.chain
             status.gsub!(/[^。！？…]*?[。！？…]*?$/, "") if status.length > 140
             @client.update(status, options={:in_reply_to_status_id => m.id})
+          rescue RedoCountExceeded
+            break
           rescue
+            redo_count += 1
             redo
           end
           @config[:laststatus] = m.id
           sleep 3
         end
-          @config = YAML.dump(@config)
-          f = File.open("#{@name}/config.yml", "w"); f.puts @config; f.close
+        @config = YAML.dump(@config)
+        f = File.open("#{@name}/config.yml", "w"); f.puts @config; f.close
       end
     end
   end
