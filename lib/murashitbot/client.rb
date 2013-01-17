@@ -2,7 +2,7 @@
 require 'twitter'
 require 'yaml'
 
-class RedoCountExceeded < StandardError; end
+class RetryCountExceeded < StandardError; end
 
 module Murashitbot
   class Client
@@ -23,15 +23,17 @@ module Murashitbot
     def post
       nhc = open("#{@name}/head_candidates.dat", "rb") {|f| Marshal.load(f)}
       marcov = Murashitbot::Marcov.new(@db, nhc, @length)
+      retry_count = 0
       begin
-        raise RedoCountExceeded if redo_count > 9
+        raise RetryCountExceeded if retry_count > 9
         status = marcov.chain
         status.gsub!(/[^。！？…]*?[。！？…]*?$/, "") if status.length > 140
         @client.update(status)
-      rescue RedoCountExceeded
+      rescue RetryCountExceeded
+        sleep 1
       rescue
-        redo_count += 1
-        redo
+        retry_count += 1
+        retry
       end
     end
 
@@ -47,17 +49,17 @@ module Murashitbot
           re_db = Murashitbot::Parser.parse(m.text.toutf8.delete("@#{@name} "))
           hc = @db.list_reply_head_candidates(re_db)
           marcov = Murashitbot::Marcov.new(@db,hc,@length)
-          redo_count = 0
+          retry_count = 0
           begin
-            raise RedoCountExceeded if redo_count > 9
+            raise RetryCountExceeded if retry_count > 9
             status = "@" + at_id + " " + marcov.chain
             status.gsub!(/[^。！？…]*?[。！？…]*?$/, "") if status.length > 140
             @client.update(status, options={:in_reply_to_status_id => m.id})
-          rescue RedoCountExceeded
+          rescue RetryCountExceeded
             break
           rescue
-            redo_count += 1
-            redo
+            retry_count += 1
+            retry
           end
           @config[:laststatus] = m.id
           sleep 3
