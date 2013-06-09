@@ -29,10 +29,10 @@ module Murashitbot
         status = marcov.chain
         status.gsub!(/[^。！？…]*?[。！？…]*?$/, "") if status.length > 140
         @client.update(status)
-      rescue RetryCountExceeded
-        sleep 1
+      rescue RetryCountExceeded => e
+        $stderr.puts e
       rescue
-        retry_count += 1
+        sleep 1; retry_count += 1
         retry
       end
     end
@@ -55,7 +55,8 @@ module Murashitbot
             status = "@" + at_id + " " + marcov.chain
             status.gsub!(/[^。！？…]*?[。！？…]*?$/, "") if status.length > 140
             @client.update(status, options={:in_reply_to_status_id => m.id})
-          rescue RetryCountExceeded
+          rescue RetryCountExceeded => e
+            $stderr.puts e
             break
           rescue
             retry_count += 1

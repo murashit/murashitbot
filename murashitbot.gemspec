@@ -24,6 +24,8 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency('thor', '>=0.15')
   gem.add_runtime_dependency('oauth', '>=0.4.2')
 
+  gem.add_development_dependency('bundler')
+  gem.add_development_dependency('rake')
   gem.add_development_dependency('rspec')
 end
 
