@@ -8,13 +8,12 @@ module Murashitbot
   class Client
     def initialize(name)
       @config = YAML.load_file "#{name}/config.yml"
-      Twitter.configure do |conf|
+      @client = Twitter::REST::Client.new do |conf|
         conf.consumer_key = @config[:consumer][:key]
         conf.consumer_secret = @config[:consumer][:secret]
-        conf.oauth_token = @config[:access][:token]
-        conf.oauth_token_secret = @config[:access][:secret]
+        conf.access_token = @config[:access][:token]
+        conf.access_token_secret = @config[:access][:secret]
       end
-      @client = Twitter::Client.new
       @name = name
       @length = 80
       @db = Murashitbot::Db.load(name)
